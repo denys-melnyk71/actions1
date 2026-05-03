@@ -69,7 +69,7 @@ def display(solution1, solution2):
     ax2d3.plot(time2, z2, label="Початкові умови 2", alpha=0.6)
     ax2d3.legend()
     # відображаємо графік
-    plt.show()
+    plt.savefig("lorenz.png")
     
 if __name__ == "__main__":
     solution1 = (run(1, 1, 1))
