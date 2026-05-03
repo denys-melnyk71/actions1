@@ -1,2 +1,4 @@
 pytest
 matplotlib
+flake8
+pytest-html
