@@ -74,7 +74,8 @@ def display(solution1, solution2):
     ax2d3.legend()
     # відображаємо графік
     plt.savefig("lorenz.png")
-    
+
+
 if __name__ == "__main__":
     solution1 = (run(1, 1, 1))
     solution2 = (run(1, 1, 1.0001))
