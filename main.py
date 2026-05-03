@@ -7,8 +7,10 @@ delta_t = 0.01
 # налаштування
 SIMULATION_TIME = 30
 
+
 def init(x_init, y_init, z_init):
     return [x_init], [y_init], [z_init], [0]
+
 
 def upd(x_res, y_res, z_res, time_steps):
     # отримуємо крайні значення x, y, z
@@ -30,6 +32,7 @@ def upd(x_res, y_res, z_res, time_steps):
     z_res.append(z)
     time_steps.append(t)
 
+
 def run(x_init, y_init, z_init):
     x_res, y_res, z_res, time_steps = init(x_init, y_init, z_init)
     t = time_steps[-1]
@@ -37,6 +40,7 @@ def run(x_init, y_init, z_init):
         upd(x_res, y_res, z_res, time_steps)
         t = time_steps[-1]
     return x_res, y_res, z_res, time_steps
+
 
 def display(solution1, solution2):
     x1, y1, z1, time1 = solution1[0], solution1[1], solution1[2], solution1[3]
@@ -52,16 +56,16 @@ def display(solution1, solution2):
     ax3d.plot(x1, y1, z1, label="Початкові умови 1")
     ax3d.plot(x2, y2, z2, label="Початкові умови 2", alpha=0.6)
     ax3d.legend()
-    # додамєо 2д графіки на піддіаграму  
+    # додамєо 2д графіки на піддіаграму
     # по X
     ax2d1.set_title("Значення по осі X")
     ax2d1.plot(time1, x1, label="Початкові умови 1")
-    ax2d1.plot(time2, x2, label="Початкові умови 2", alpha=0.6)  
+    ax2d1.plot(time2, x2, label="Початкові умови 2", alpha=0.6)
     ax2d1.legend()
     # по Y
     ax2d2.set_title("Значення по осі Y")
     ax2d2.plot(time1, y1, label="Початкові умови 1")
-    ax2d2.plot(time2, y2, label="Початкові умови 2", alpha=0.6)  
+    ax2d2.plot(time2, y2, label="Початкові умови 2", alpha=0.6)
     ax2d2.legend()
     # по Z
     ax2d3.set_title("Значення по осі Z")
