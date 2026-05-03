@@ -1,203 +1,77 @@
-import pyttsx3
-import tts.sapi
-import threading
-import speech_recognition as s
+import matplotlib.pyplot as plt
+# параметри системи Лоренца
+sigma = 10
+rho = 28
+beta = 8/3
+delta_t = 0.01
+# налаштування
+SIMULATION_TIME = 30
 
-engine = pyttsx3.init()
-voice = tts.sapi.Sapi()
-voice.set_voice('Anatol')
-CURRENT_VOICE = 'Anatol'
-sr = s.Recognizer()
+def init(x_init, y_init, z_init):
+    return [x_init], [y_init], [z_init], [0]
 
-VOICE_INPUT = False
-OUTPUT_FORMAT = "текст"
+def upd(x_res, y_res, z_res, time_steps):
+    # отримуємо крайні значення x, y, z
+    x = x_res[-1]
+    y = y_res[-1]
+    z = z_res[-1]
+    t = time_steps[-1]
+    # знаходимо нові значення
+    delta_x = sigma*(y - x) * delta_t
+    delta_y = (rho*x - y - x*z) * delta_t
+    delta_z = (x*y - beta*z) * delta_t
+    x += delta_x
+    y += delta_y
+    z += delta_z
+    t += delta_t
+    # додаємо нові значення в кінець списків
+    x_res.append(x)
+    y_res.append(y)
+    z_res.append(z)
+    time_steps.append(t)
 
-def listen():
-    global audio
-    with s.Microphone() as source:
-        audio = sr.listen(source)
+def run(x_init, y_init, z_init):
+    x_res, y_res, z_res, time_steps = init(x_init, y_init, z_init)
+    t = time_steps[-1]
+    while t < SIMULATION_TIME:
+        upd(x_res, y_res, z_res, time_steps)
+        t = time_steps[-1]
+    return x_res, y_res, z_res, time_steps
 
-def msg_in():
-    global VOICE_INPUT
-    if VOICE_INPUT:
-        # слухання
-        t = threading.Thread(target=listen)
-        t.start()
-        input('@ *слухає* (Enter щоб зупинити)')
-        t.join()
-        VOICE_INPUT = False
-        # STT
-        try:
-            msg = sr.recognize_google(audio, language="uk-UA")
-            return msg
-        except sr.UnknownValueError:
-            return "Я не зрозумів. Можеш повторити?"
-    else:
-        return input("> ")
+def display(solution1, solution2):
+    x1, y1, z1, time1 = solution1[0], solution1[1], solution1[2], solution1[3]
+    x2, y2, z2, time2 = solution2[0], solution2[1], solution2[2], solution2[3]
+    fig = plt.figure(figsize=(12, 12))
+    # створюємо 3 піддіаграми для 2д і  1 для 3д графіків
+    ax3d = fig.add_subplot(221, projection="3d")
+    ax2d1 = fig.add_subplot(222)
+    ax2d2 = fig.add_subplot(223)
+    ax2d3 = fig.add_subplot(224)
+    # додамєо 3д графік на піддіаграму
+    ax3d.set_title("Атрактор лоренца")
+    ax3d.plot(x1, y1, z1, label="Початкові умови 1")
+    ax3d.plot(x2, y2, z2, label="Початкові умови 2", alpha=0.6)
+    ax3d.legend()
+    # додамєо 2д графіки на піддіаграму  
+    # по X
+    ax2d1.set_title("Значення по осі X")
+    ax2d1.plot(time1, x1, label="Початкові умови 1")
+    ax2d1.plot(time2, x2, label="Початкові умови 2", alpha=0.6)  
+    ax2d1.legend()
+    # по Y
+    ax2d2.set_title("Значення по осі Y")
+    ax2d2.plot(time1, y1, label="Початкові умови 1")
+    ax2d2.plot(time2, y2, label="Початкові умови 2", alpha=0.6)  
+    ax2d2.legend()
+    # по Z
+    ax2d3.set_title("Значення по осі Z")
+    ax2d3.plot(time1, z1, label="Початкові умови 1")
+    ax2d3.plot(time2, z2, label="Початкові умови 2", alpha=0.6)
+    ax2d3.legend()
+    # відображаємо графік
+    plt.show()
     
-
-def msg_out(msg):
-    global OUTPUT_FORMAT
-    if OUTPUT_FORMAT == "текст":
-        print('@ ' + msg)
-    elif OUTPUT_FORMAT == "голос":
-        print('@ *говорить*')
-        voice.say(msg)
-    elif OUTPUT_FORMAT == "змішаний":
-        print('@ ' + msg)
-        voice.say(msg)
-    else:
-        print("ПОМИЛКА: невідомий формат виводу")
-
-
-def arg_check(user_argl, argm):
-    # argm - матриця, де кожен вкладений список 
-    # це список доступних аргументів на відповідну позицію
-    argc = len(argm)
-    if len(user_argl) < argc:
-        print('Недостатньо аргументів. Синтаксис команд можна переглянути ввівши "/команди"')
-        return False
-    i = 0
-    for i in range(argc):
-        if user_argl[i] not in argm[i]:
-            print('ПОМИЛКА: неочікуваний аргумент "' + str(user_argl[i]) + '"')
-            print('Очікується один з ' + str(argm[i]))
-            return False
-        i += 1
-    return True
-
-
-def command(msg):
-    global VOICE_INPUT, OUTPUT_FORMAT, CURRENT_VOICE
-
-    # виділяємо з повідомлення назву команди, список та кількість аргументів
-    temp = msg.split()
-    cmd = temp[0]
-    arg_count = len(temp) - 1
-    arg_list = []
-    if arg_count > 0:
-        arg_list = temp[1:]
-
-    if cmd == "команди":
-        print("============================ Список команд ============================")
-        print("/команди                       - подивитись список команд")
-        print("/вихід                         - завершити виконання програми")
-        print("/г                             - записати голосове повідомлення")
-        print("/формат <знак> <назва формату> - змінити формат виводу")
-        print("/формати                       - подивитись список форматів виводу")
-        print("/голос <знак> <назва голосу>   - змінити голос")
-        print("/голоси                        - подивитись список голосів")
-        print("/гучність <знак> <значення>    - змінити гучність")
-        print("/швидкість <знак> <значення>   - змінити швидкість")
-        print("==================== Можливі значення поля <знак> ====================")
-        print("/<команда> + <значення> - збільшити поточне значення на задане")
-        print("/<команда> - <значення> - зменшити поточне значення на задане")
-        print("/<команда> = <значення> - замінити поточне значення на задане")
-        print("/<команда> ?            - подивитись поточне значення")
-        print("=======================================================================")
-    elif cmd == "г":
-        VOICE_INPUT = True
-    elif cmd == "формат":
-        if arg_count == 0:
-            print('Недостатньо аргументів. Синтаксис команд можна переглянути ввівши "/команди"')
-            return False
-        elif arg_count == 1:
-            if not arg_check(arg_list, [['?']]):
-                return
-            print('Поточний формат виводу - ' + OUTPUT_FORMAT)
-        else:
-            if not arg_check(arg_list, [['='], ['текст', 'голос', 'змішаний']]):
-                return
-            OUTPUT_FORMAT = arg_list[1]
-            print('Формат виводу змінено на ' + OUTPUT_FORMAT)
-    elif cmd == "формати":
-        print('================== Список форматів ==================')
-        print('текст    - вивід в консоль')
-        print('голос    - вивід на динамікіи/навушники')
-        print('змішаний - вивід в консоль та на динамікіи/навушники')
-        print('=====================================================')
-    elif cmd == "голос":
-        if arg_count == 0:
-            print('Недостатньо аргументів. Синтаксис команд можна переглянути ввівши "/команди"')
-            return False
-        elif arg_count == 1:
-            if arg_check(arg_list, [['?']]):
-                print('Поточний голос - ' + CURRENT_VOICE)
-        else:
-            # формуємо список голосів
-            v_names = []
-            voices = engine.getProperty('voices')
-            for v in voices:
-                v_names.append(v.name)
-            # перевірка аргументів 
-            if arg_check(arg_list, [['='], v_names]):
-                # зміна голосу
-                CURRENT_VOICE = arg_list[1]
-                voice.set_voice(CURRENT_VOICE)
-                print('Поточний голос - ' + CURRENT_VOICE)
-    elif cmd == "голоси":
-        voices = engine.getProperty('voices')
-        for v in voices:
-            print(v.name)
-    elif cmd == "гучність":
-        volume = voice.voice.Volume # фіксуємо поточну гучність
-        if arg_count == 0:
-            print('Недостатньо аргументів. Синтаксис команд можна переглянути ввівши "/команди"')
-            return False
-        elif arg_count == 1:
-            if arg_check(arg_list, [['?']]):
-                print("Поточна гучність - " + str(voice.voice.Volume))
-        else:
-            if arg_check(arg_list, [['+', '-', '=']]):
-                try:
-                    value = int(arg_list[1])
-                    if arg_list[0] == '+':
-                        voice.voice.Volume = min(voice.voice.Volume + value, 100)
-                        print("Гучність змінена " + str(volume) + '->' + str(voice.voice.Volume))
-                    elif arg_list[0] == '-':
-                        voice.voice.Volume = max(voice.voice.Volume - value, 0)
-                        print("Гучність змінена " + str(volume) + '->' + str(voice.voice.Volume))
-                    else: # arg_list[0] == '='
-                        voice.voice.Volume = min(max(value, 0), 100)
-                        print("Гучність змінена " + str(volume) + '->' + str(voice.voice.Volume))
-                except ValueError:
-                    print("ПОМИЛКА: очікується ціле число")
-                    return
-    elif cmd == "швидкість":
-        rate = voice.voice.Rate # фіксуємо поточну швидкість
-        if arg_count == 0:
-            print('Недостатньо аргументів. Синтаксис команд можна переглянути ввівши "/команди"')
-            return False
-        elif arg_count == 1:
-            if arg_check(arg_list, [['?']]):
-                print("Поточна швидкість - " + str(voice.voice.Rate))
-        else:
-            if arg_check(arg_list, [['+', '-', '=']]):
-                try:
-                    value = int(arg_list[1])
-                    if arg_list[0] == '+':
-                        voice.voice.Rate = min(voice.voice.Rate + value, 10)
-                        print("Швидкість змінена " + str(rate) + '->' + str(voice.voice.Rate))
-                    elif arg_list[0] == '-':
-                        voice.voice.Rate = max(voice.voice.Rate - value, -10)
-                        print("Швидкість змінена " + str(rate) + '->' + str(voice.voice.Rate))
-                    else: # arg_list[0] == '='
-                        voice.voice.Rate = min(max(value, -10), 10)
-                        print("Швидкість змінена " + str(rate) + '->' + str(voice.voice.Rate))
-                except ValueError:
-                    print("ПОМИЛКА: очікується ціле число")
-                    return
-    else:
-        print("ПОМИЛКА: невідома команда")
-
-
 if __name__ == "__main__":
-    print('========= Введіть "/команди" щоб подивитись список команд =========')
-    while True:
-        msg = msg_in()
-        if msg == "/вихід":
-            break
-        elif len(msg) > 0 and msg[0] == "/":
-            command(msg[1:])
-        else:
-            msg_out(msg)
+    solution1 = (run(1, 1, 1))
+    solution2 = (run(1, 1, 1.0001))
+    display(solution1, solution2)
